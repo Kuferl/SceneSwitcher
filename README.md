@@ -11,10 +11,11 @@ Not very far developed yet, only start it when both Slobs (streamlabs obs) and t
 How to run source:
 
 Install https://electronforge.io/ (you will need Node and npm as well)
+Then execute folowing commands inside the folder:
+* npm install
+* electron-forge start
 
-simply run electron-forge start inside the folder
-
-Or download the package and execute the exe.
+Or download the package and start the executable.
 
 You will also need to allow remote control in your Slobs.
 * run Streamlabs-OBS with `--adv-settings` parameter
