@@ -1,10 +1,118 @@
 <!DOCTYPE html>
 <html>
-  <head>
+<head>
     <meta charset="utf-8">
     <title></title>
-  </head>
-  <body>
-    Well hey there!!!
-  </body>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <!-- Bootstrap core CSS -->
+    <link href="assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="assets/css/bootstrap-select.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <div class="form-group">
+            <label for="exampleFormControlSelect1">Queue Scene</label>
+            <select class="form-control" id="queueScene">
+                <option>No scenes loaded</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="exampleFormControlSelect1">Ingame Scene</label>
+            <select class="form-control" id="ingameScene">
+                <option>No scenes loaded</option>
+            </select>
+        </div>
+
+        <button type="button" class="btn btn-success" id="refreshBtn">Refresh</button>
+    </div>
+</body>
+
+<script>
+import $ from "jquery";
+const { ipcRenderer } = require('electron')
+
+let sock = new SockJS('http://127.0.0.1:59650/api');
+let slobs_connected = false;
+
+let loadSceneId = 'loadSceneId';
+
+let scenes = {
+    queue: 'scene_4b91dc48-2584-413a-94a7-d3360fb1b5f6',
+    ingame : 'scene_268526e3-86ae-4909-973a-92bcc049255f'
+};
+
+ipcRenderer.on('scene-storage', (event, arg) => {
+  scenes = arg;
+})
+
+ipcRenderer.on('active-scene', (event, arg) => {
+  setActiveScene(arg);
+})
+
+$('#queueScene').on('change', () => {
+    scenes.queue = $('#queueScene').val()
+    updateStorage();
+})
+
+$('#ingameScene').on('change', () => {
+    scenes.ingame = $('#ingameScene').val()
+    updateStorage();
+})
+
+requestScenes()
+
+function loadScenes(data){
+    let options = '';
+    $.each(data.result, function( index, value ) {
+      options += '<option value="'+value.id+'">'+value.name+'</option>';
+    });
+
+    scenes = ipcRenderer.sendSync('get-storage');
+
+    $('#queueScene').empty().html(options).val(scenes.queue);
+    $('#ingameScene').empty().html(options).val(scenes.ingame);
+}
+
+function requestScenes(){
+    if(!slobs_connected) return;
+    let json = {"jsonrpc": "2.0", "id": loadSceneId, "method": "getScenes", "params": {"resource": "ScenesService"}};
+    sock.send(JSON.stringify(json));
+}
+
+function setActiveScene(id){
+    if(!slobs_connected) return;
+    let json = {"jsonrpc": "2.0", "id": "setActiveScene", "method": "makeSceneActive", "params": {"resource": "ScenesService", args: [id]}};
+    sock.send(JSON.stringify(json));
+}
+
+function updateStorage() {
+    scenes = ipcRenderer.sendSync('update-storage', scenes);
+}
+
+sock.onopen = function() {
+    slobs_connected = true;
+    requestScenes();
+};
+
+sock.onmessage = function(e) {
+    let data = JSON.parse(e.data)
+    switch(data.id) {
+        case loadSceneId: {
+            loadScenes(data);
+            break;
+        }
+        default: {
+            console.log(data.id)
+            break;
+        }
+    }
+};
+
+sock.onclose = function() {
+    slobs_connected = false;
+    console.log('close');
+};
+</script>
 </html>
