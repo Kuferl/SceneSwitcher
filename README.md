@@ -10,7 +10,7 @@ Not very far developed yet, only start it when both Slobs (streamlabs obs) and t
 
 How to run source:
 
-Install (Electron Forge)[https://electronforge.io/] (you will need Node and npm as well)
+Install https://electronforge.io/ (you will need Node and npm as well)
 
 simply run electron-forge start inside the folder
 
