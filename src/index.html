@@ -4,13 +4,21 @@
     <meta charset="utf-8">
     <title></title>
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-    <!-- Bootstrap core CSS -->
+    <!-- Bootstrap core color -->
     <link href="assets/css/bootstrap.min.css" rel="stylesheet">
     <link href="assets/css/bootstrap-select.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/all.css">
 </head>
 
 <body>
     <div class="container">
+        <br>
+        <ul class="list-group">
+            <span id="lcu_status"><li class="list-group-item list-group-item-danger"><i class="fas fa-unlink"></i> League Client: Not connected</li></span>
+            <span id="slobs_status"><li class="list-group-item list-group-item-danger"><i class="fas fa-unlink"></i> Streamlabs: Not connected</li></span>
+        </ul>
+
+        <br>
         <div class="form-group">
             <label for="exampleFormControlSelect1">Queue Scene</label>
             <select class="form-control" id="queueScene">
@@ -33,7 +41,7 @@
 import $ from "jquery";
 const { ipcRenderer } = require('electron')
 
-let sock = new SockJS('http://127.0.0.1:59650/api');
+let sock;
 let slobs_connected = false;
 
 let loadSceneId = 'loadSceneId';
@@ -43,12 +51,28 @@ let scenes = {
     ingame : 'scene_268526e3-86ae-4909-973a-92bcc049255f'
 };
 
+let status = {
+    not_connected: {
+        lcu: '<li class="list-group-item list-group-item-danger"><i class="fas fa-unlink"></i> League Client: Not connected</li>',
+        slobs: '<li class="list-group-item list-group-item-danger"><i class="fas fa-unlink"></i> Streamlabs: Not connected</li>'
+    },
+    connected: {
+        lcu: '<li class="list-group-item list-group-item-success"><i class="fas fa-link"></i> League Client: Connected</li>',
+        slobs: '<li class="list-group-item list-group-item-success"><i class="fas fa-link"></i> Streamlabs: Connected</li>'
+    },
+    current: 0
+};
+
 ipcRenderer.on('scene-storage', (event, arg) => {
-  scenes = arg;
+    scenes = arg;
 })
 
 ipcRenderer.on('active-scene', (event, arg) => {
-  setActiveScene(arg);
+    setActiveScene(arg);
+})
+
+ipcRenderer.on('lcu-status', (event, arg) => {
+    updateLcu(arg)
 })
 
 $('#queueScene').on('change', () => {
@@ -61,12 +85,27 @@ $('#ingameScene').on('change', () => {
     updateStorage();
 })
 
-requestScenes()
+$('#refreshBtn').on('click', () => {
+    requestScenes();
+})
+
+function updateLcu(arg) {
+    if(arg == 1){
+        document.getElementById("lcu_status").innerHTML = status.connected.lcu
+    }else{
+        document.getElementById("lcu_status").innerHTML = status.not_connected.lcu
+    }
+}
+
+function getLcuStatus(){
+    let stat = ipcRenderer.sendSync('get-lcu-status');
+    updateLcu(stat);
+}
 
 function loadScenes(data){
     let options = '';
     $.each(data.result, function( index, value ) {
-      options += '<option value="'+value.id+'">'+value.name+'</option>';
+        options += '<option value="'+value.id+'">'+value.name+'</option>';
     });
 
     scenes = ipcRenderer.sendSync('get-storage');
@@ -91,28 +130,46 @@ function updateStorage() {
     scenes = ipcRenderer.sendSync('update-storage', scenes);
 }
 
-sock.onopen = function() {
-    slobs_connected = true;
-    requestScenes();
-};
+let recInterval = null;
 
-sock.onmessage = function(e) {
-    let data = JSON.parse(e.data)
-    switch(data.id) {
-        case loadSceneId: {
-            loadScenes(data);
-            break;
-        }
-        default: {
-            console.log(data.id)
-            break;
-        }
-    }
-};
+let connectSlobs = function() {
+    console.log("trying to connect")
+    sock = new SockJS('http://127.0.0.1:59650/api')
 
-sock.onclose = function() {
+  clearInterval(recInterval);
+
+  sock.onopen = function() {
+      slobs_connected = true;
+      document.getElementById("slobs_status").innerHTML = status.connected.slobs;
+      requestScenes()
+  };
+
+  sock.onmessage = function(e) {
+      let data = JSON.parse(e.data)
+      switch(data.id) {
+          case loadSceneId: {
+              loadScenes(data);
+              break;
+          }
+          default: {
+              console.log(data.id)
+              break;
+          }
+      }
+  };
+
+  sock.onclose = function() {
+    sock = null;
     slobs_connected = false;
-    console.log('close');
+    document.getElementById("slobs_status").innerHTML = status.not_connected.slobs
+    recInterval = setInterval(function() {
+      connectSlobs();
+    }, 2000);
+  };
 };
+
+getLcuStatus();
+connectSlobs();
+
 </script>
 </html>
