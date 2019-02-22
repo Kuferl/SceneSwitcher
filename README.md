@@ -1,14 +1,10 @@
 # Scene Switcher
 
-This electron app allows you to automatically swap scenes depending on your League of Legends status (ingame or in queue)
-
-## Getting Started
-
-Simply download the latest release, unpack the zip and start the executeable.
+This electron app allows you to automatically swap scenes in Streamlabs OBS depending on your League of Legends status (ingame or in queue).
 
 ### Prerequisites
 
-You will also need to allow remote control in your Slobs.
+You will need to allow remote control in your Streamlabs OBS.
 
 ```
 run Streamlabs-OBS with `--adv-settings` parameter
@@ -16,17 +12,19 @@ enable websockets in `settings->API`
 Port should be 59650
 ```
 
-### Run source code
+### Prebuilt
 
-Install https://electronforge.io/ (you will need Node and npm as well)
-Pull this code.
-Then execute following commands inside the folder:
+Prebuilt binaries for Windows can be found [here](https://github.com/Kuferl/SceneSwitcher/releases)
 
-```
-npm install
-electron-forge start
-```
+### Build from source
 
-## License
+1. Clone repository
+`git clone https://github.com/Kuferl/SceneSwitcher.git`
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+2. Install [electron-forge](https://electronforge.io/)
+
+3. Install dependencies
+`npm install`
+
+4. Start Scene Switcher
+`electron-forge start`
