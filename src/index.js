@@ -36,7 +36,6 @@ const createWindow = () => {
 
 app.on('ready', () => {
     createWindow();
-    console.log("started lcu connector")
     connector.start();
 });
 
@@ -52,31 +51,40 @@ app.on('activate', () => {
   }
 });
 
-connector.on('connect', (data) => {
-    const ws = new RiotWSProtocol('wss://'+data.username+':'+data.password+'@'+data.address+':'+data.port+'/');
-    ws.on('open', () => {
-        mainWindow.webContents.send('lcu-status', 1);
-        lcu_status = 1;
-        ws.subscribe('OnJsonApiEvent', (data) => {
-            if(data.uri.includes('/lol-gameflow/v1/session')){
-                if(data.data.gameClient !== undefined){
-                    let scenes = store.get('scenes');
-                    if(data.data.gameClient.running) {
-                        mainWindow.webContents.send('active-scene', scenes.ingame)
-                    }else {
-                        mainWindow.webContents.send('active-scene', scenes.queue)
+const startLCU = (data) => {
+    try{
+        const ws = new RiotWSProtocol('wss://'+data.username+':'+data.password+'@'+data.address+':'+data.port+'/');
+        ws.on('open', () => {
+            clearInterval(lcuTimer);
+            mainWindow.webContents.send('lcu-status', 1);
+            lcu_status = 1;
+            ws.subscribe('OnJsonApiEvent', (data) => {
+                if(data.uri.includes('/lol-gameflow/v1/session')){
+                    if(data.data.gameClient !== undefined){
+                        let scenes = store.get('scenes');
+                        if(data.data.gameClient.running) {
+                            mainWindow.webContents.send('active-scene', scenes.ingame)
+                        }else {
+                            mainWindow.webContents.send('active-scene', scenes.queue)
+                        }
                     }
                 }
-            }
+            });
         });
-    });
 
-    ws.on('close', () => {
-        console.log("lost connection");
-        mainWindow.webContents.send('lcu-status', 0);
-        lcu_status = 0;
-        ws.close();
-    })
+        ws.on('close', () => {
+            console.log("lost connection");
+            mainWindow.webContents.send('lcu-status', 0);
+            lcu_status = 0;
+            ws.close();
+        })
+    }catch(err){
+        setTimeout(startLCU, 2000, data);
+    }
+}
+
+connector.on('connect', (data) => {
+    startLCU(data);
 });
 
 connector.on('disconnect', (data) => {
