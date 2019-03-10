@@ -55,7 +55,6 @@ const startLCU = (data) => {
     try{
         const ws = new RiotWSProtocol('wss://'+data.username+':'+data.password+'@'+data.address+':'+data.port+'/');
         ws.on('open', () => {
-            clearInterval(lcuTimer);
             mainWindow.webContents.send('lcu-status', 1);
             lcu_status = 1;
             ws.subscribe('OnJsonApiEvent', (data) => {
@@ -67,6 +66,8 @@ const startLCU = (data) => {
                         }else {
                             mainWindow.webContents.send('active-scene', scenes.queue)
                         }
+                    }else{
+                        mainWindow.webContents.send('active-scene', scenes.queue)
                     }
                 }
             });
